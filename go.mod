@@ -1,4 +1,4 @@
-module github.com/marco-rozz/natsrouter
+module github.com/mondora/natsrouter
 
 go 1.14
 
