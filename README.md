@@ -7,13 +7,13 @@ Trie management derived from Julien Schmidt's [httprouter](github.com/julienschm
 
 ## Install
 ```go
-go get github.com/mondora/natsrouter/pkg/natsrouter
+go get github.com/mondora/natsrouter
 ```
 
 ## Usage example
 
 ```go
-import "github.com/mondora/natsrouter/pkg/natsrouter"
+import "github.com/mondora/natsrouter"
 
 func (cfg *Config) SubscribeListener() {
 	cfg.nmux = natsrouter.New()
