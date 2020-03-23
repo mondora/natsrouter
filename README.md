@@ -3,7 +3,7 @@
 # natsrouter
 A high performance NATS client router that scales well
 
-Trie management derived from Julien Schmidt's [httprouter](github.com/julienschmidt/httprouter), but adapted to the notation of the NATS topics
+Trie management derived from Julien Schmidt's [httprouter](https://github.com/julienschmidt/httprouter), but adapted to the notation of the NATS topics
 
 ## Install
 ```shell script
