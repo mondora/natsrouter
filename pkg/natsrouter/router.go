@@ -22,7 +22,7 @@ type Param struct {
 }
 
 // Params is a Param-slice, as returned by the router.
-// The slice is ordered, the first URL parameter is also the first slice value.
+// The slice is ordered, the first TOPIC parameter is also the first slice value.
 // It is therefore safe to read values by the index.
 type Params []Param
 
@@ -57,7 +57,7 @@ func fromNatsPath(path string) string {
 	return result
 }
 
-// ParamsFromContext pulls the URL parameters from a request context,
+// ParamsFromContext pulls the parameters from a request context,
 // or returns nil if none are present.
 func ParamsFromContext(ctx context.Context) Params {
 	p, _ := ctx.Value(ParamsKey).(Params)
@@ -75,7 +75,7 @@ func (ps Params) MatchedRoutePath() string {
 	return ps.ByName(MatchedRoutePathParam)
 }
 
-// Router is a http.Handler which can be used to dispatch requests to different
+// Router is a handler which can be used to dispatch requests to different
 // handler functions via configurable routes
 type Router struct {
 	trees map[string]*node
@@ -83,41 +83,11 @@ type Router struct {
 	paramsPool sync.Pool
 	maxParams  uint16
 
-	// If enabled, adds the matched route path onto the http.Request context
+	// If enabled, adds the matched route path onto the request context
 	// before invoking the handler.
 	// The matched route path is only added to handlers of routes that were
 	// registered when this option was enabled.
 	SaveMatchedRoutePath bool
-
-	// Enables automatic redirection if the current route can't be matched but a
-	// handler for the path with (without) the trailing slash exists.
-	// For example if /foo/ is requested but a route only exists for /foo, the
-	// client is redirected to /foo with http status code 301 for GET requests
-	// and 308 for all other request methods.
-	RedirectTrailingSlash bool
-
-	// If enabled, the router tries to fix the current request path, if no
-	// handle is registered for it.
-	// First superfluous path elements like ../ or // are removed.
-	// Afterwards the router does a case-insensitive lookup of the cleaned path.
-	// If a handle can be found for this route, the router makes a redirection
-	// to the corrected path with status code 301 for GET requests and 308 for
-	// all other request methods.
-	// For example /FOO and /..//Foo could be redirected to /foo.
-	// RedirectTrailingSlash is independent of this option.
-	RedirectFixedPath bool
-
-	// If enabled, the router checks if another method is allowed for the
-	// current route, if the current request can not be routed.
-	// If this is the case, the request is answered with 'Method Not Allowed'
-	// and HTTP status code 405.
-	// If no other Method is allowed, the request is delegated to the NotFound
-	// handler.
-	HandleMethodNotAllowed bool
-
-	// If enabled, the router automatically replies to OPTIONS requests.
-	// Custom OPTIONS handlers take priority over automatic replies.
-	HandleOPTIONS bool
 
 	// Cached value of global (*) allowed methods
 	globalAllowed string
@@ -136,12 +106,7 @@ type Router struct {
 // New returns a new initialized Router.
 // Path auto-correction, including trailing slashes, is enabled by default.
 func New() *Router {
-	return &Router{
-		RedirectTrailingSlash:  true,
-		RedirectFixedPath:      true,
-		HandleMethodNotAllowed: true,
-		HandleOPTIONS:          true,
-	}
+	return &Router{}
 }
 
 func (r *Router) getParams() *Params {
