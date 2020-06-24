@@ -24,7 +24,7 @@ func longestCommonPrefix(a, b string) int {
 
 // Search for a wildcard segment and check the name for invalid characters.
 // Returns -1 as index, if no wildcard was found.
-func findWildcard(path string) (wilcard string, i int, valid bool) {
+func findWildcard(path string) (wildcard string, i int, valid bool) {
 	// Find start
 	for start, c := range []byte(path) {
 		// A wildcard starts with ':' (param) or '*' (catch-all)
@@ -215,7 +215,7 @@ func (n *node) insertChild(path, fullPath string, handle Handle) {
 	for {
 		// Find prefix until first wildcard
 		wildcard, i, valid := findWildcard(path)
-		if i < 0 { // No wilcard found
+		if i < 0 { // No wildcard found
 			break
 		}
 
@@ -254,7 +254,7 @@ func (n *node) insertChild(path, fullPath string, handle Handle) {
 			n.priority++
 
 			// If the path doesn't end with the wildcard, then there
-			// will be another non-wildcard subpath starting with '/'
+			// will be another non-wildcard subpath starting with '.'
 			if len(wildcard) < len(path) {
 				path = path[len(wildcard):]
 				child := &node{
@@ -278,7 +278,7 @@ func (n *node) insertChild(path, fullPath string, handle Handle) {
 			panic("catch-all conflicts with existing handle for the path segment root in path '" + fullPath + "'")
 		}
 
-		// Currently fixed width 1 for '/'
+		// Currently fixed width 1 for '.'
 		i--
 		if path[i] != '.' {
 			panic("no . before catch-all in path '" + fullPath + "'")
@@ -340,7 +340,7 @@ walk: // Outer loop for walking the tree
 					// Nothing found.
 					// We can recommend to redirect to the same URL without a
 					// trailing slash if a leaf exists for that path.
-					tsr = (path == "." && n.handle != nil)
+					tsr = path == "." && n.handle != nil
 					return
 
 				}
@@ -349,7 +349,7 @@ walk: // Outer loop for walking the tree
 				n = n.children[0]
 				switch n.nType {
 				case param:
-					// Find param end (either '/' or path end)
+					// Find param end (either '.' or path end)
 					end := 0
 					for end < len(path) && path[end] != '.' {
 						end++
@@ -378,7 +378,7 @@ walk: // Outer loop for walking the tree
 						}
 
 						// ... but we can't
-						tsr = (len(path) == end+1)
+						tsr = len(path) == end+1
 						return
 					}
 
@@ -388,7 +388,7 @@ walk: // Outer loop for walking the tree
 						// No handle found. Check if a handle for this path + a
 						// trailing slash exists for TSR recommendation
 						n = n.children[0]
-						tsr = (n.path == "." && n.handle != nil)
+						tsr = n.path == "." && n.handle != nil
 					}
 
 					return
@@ -446,7 +446,7 @@ walk: // Outer loop for walking the tree
 		// Nothing found. We can recommend to redirect to the same URL with an
 		// extra trailing slash if a leaf exists for that path
 		tsr = (path == ".") ||
-			(len(prefix) == len(path)+1 && prefix[len(path)] == '/' &&
+			(len(prefix) == len(path)+1 && prefix[len(path)] == '.' &&
 				path == prefix[:len(prefix)-1] && n.handle != nil)
 		return
 	}
@@ -582,7 +582,7 @@ walk: // Outer loop for walking the tree
 
 				// Nothing found. We can recommend to redirect to the same URL
 				// without a trailing slash if a leaf exists for that path
-				if fixTrailingSlash && path == "/" && n.handle != nil {
+				if fixTrailingSlash && path == "." && n.handle != nil {
 					return ciPath
 				}
 				return nil
@@ -591,9 +591,9 @@ walk: // Outer loop for walking the tree
 			n = n.children[0]
 			switch n.nType {
 			case param:
-				// Find param end (either '/' or path end)
+				// Find param end (either '.' or path end)
 				end := 0
-				for end < len(path) && path[end] != '/' {
+				for end < len(path) && path[end] != '.' {
 					end++
 				}
 
@@ -623,8 +623,8 @@ walk: // Outer loop for walking the tree
 					// No handle found. Check if a handle for this path + a
 					// trailing slash exists
 					n = n.children[0]
-					if n.path == "/" && n.handle != nil {
-						return append(ciPath, '/')
+					if n.path == "." && n.handle != nil {
+						return append(ciPath, '.')
 					}
 				}
 				return nil
@@ -646,11 +646,11 @@ walk: // Outer loop for walking the tree
 			// Try to fix the path by adding a trailing slash
 			if fixTrailingSlash {
 				for i, c := range []byte(n.indices) {
-					if c == '/' {
+					if c == '.' {
 						n = n.children[i]
 						if (len(n.path) == 1 && n.handle != nil) ||
 							(n.nType == catchAll && n.children[0].handle != nil) {
-							return append(ciPath, '/')
+							return append(ciPath, '.')
 						}
 						return nil
 					}
@@ -661,12 +661,12 @@ walk: // Outer loop for walking the tree
 	}
 
 	// Nothing found.
-	// Try to fix the path by adding / removing a trailing slash
+	// Try to fix the path by adding . removing a trailing slash
 	if fixTrailingSlash {
-		if path == "/" {
+		if path == "." {
 			return ciPath
 		}
-		if len(path)+1 == npLen && n.path[len(path)] == '/' &&
+		if len(path)+1 == npLen && n.path[len(path)] == '.' &&
 			strings.EqualFold(path[1:], n.path[1:len(path)]) && n.handle != nil {
 			return append(ciPath, n.path...)
 		}

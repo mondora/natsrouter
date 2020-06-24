@@ -1,7 +1,6 @@
 package natsrouter
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/nats-io/nats.go"
@@ -10,12 +9,11 @@ import (
 	"sync"
 )
 
-// Handle is a function that can be registered to a route to handle HTTP
-// requests. Like http.HandlerFunc, but has a third parameter for the values of
-// wildcards (path variables).
+// Handle is a function that can be registered to a route to handle NATS
+// requests. It has a third parameter for the values of wildcards (path variables).
 type Handle func(*nats.Msg, Params, interface{})
 
-// Param is a single URL parameter, consisting of a key and a value.
+// Param is a single parameter, consisting of a key and a value.
 type Param struct {
 	Key   string
 	Value string
@@ -37,31 +35,19 @@ func (ps Params) ByName(name string) string {
 	return ""
 }
 
-type paramsKey struct{}
+var reNATSPathCatchAll = regexp.MustCompile(`(.*)\.>$`) // nolint
+var reNATSPathToken = regexp.MustCompile(`(\.\*)`)      // nolint
 
-// ParamsKey is the request context key under which URL params are stored.
-var ParamsKey = paramsKey{} //nolint
-
-var reNatsPathCathcAll = regexp.MustCompile(`(.*)\.>$`) // nolint
-var reNatsPathToken = regexp.MustCompile(`(\.\*)`)      // nolint
-
-const subsNatsPath = "$1.*>"
+const subsNATSPath = "$1.*>"
 
 func fromNatsPath(path string) string {
 	i := 0
-	path = reNatsPathToken.ReplaceAllStringFunc(path, func(string) string {
+	path = reNATSPathToken.ReplaceAllStringFunc(path, func(string) string {
 		i++
 		return fmt.Sprintf(".:p%d", i)
 	})
-	result := reNatsPathCathcAll.ReplaceAllString(path, subsNatsPath)
+	result := reNATSPathCatchAll.ReplaceAllString(path, subsNATSPath)
 	return result
-}
-
-// ParamsFromContext pulls the parameters from a request context,
-// or returns nil if none are present.
-func ParamsFromContext(ctx context.Context) Params {
-	p, _ := ctx.Value(ParamsKey).(Params)
-	return p
 }
 
 // MatchedRoutePathParam is the Param name under which the path of the matched
@@ -92,9 +78,7 @@ type Router struct {
 	// Cached value of global (*) allowed methods
 	globalAllowed string
 
-	// Function to handle panics recovered from http handlers.
-	// It should be used to generate a error page and return the http error code
-	// 500 (Internal Server Error).
+	// Function to handle panics recovered from NATS handlers.
 	// The handler can be used to keep your server from crashing because of
 	// unrecovered panics.
 	PanicHandler func(*nats.Msg, interface{})
@@ -133,14 +117,7 @@ func (r *Router) saveMatchedRoutePath(path string, handle Handle) Handle {
 	}
 }
 
-// Handle registers a new request handle with the given path and method.
-//
-// For GET, POST, PUT, PATCH and DELETE requests the respective shortcut
-// functions can be used.
-//
-// This function is intended for bulk loading and to allow the usage of less
-// frequently used, non-standardized or custom methods (e.g. for internal
-// communication with a proxy).
+// Handle registers a new request handle with the given path.
 func (r *Router) Handle(method, path string, handle Handle) {
 	varsCount := uint16(0)
 
@@ -188,8 +165,7 @@ func (r *Router) Handle(method, path string, handle Handle) {
 // Lookup allows the manual lookup of a method + path combo.
 // This is e.g. useful to build a framework around this router.
 // If the path was found, it returns the handle function and the path parameter
-// values. Otherwise the third return value indicates whether a redirection to
-// the same path with an extra / without the trailing slash should be performed.
+// values.
 func (r *Router) Lookup(method, path string) (Handle, Params, bool) {
 	if root := r.trees[method]; root != nil {
 		handle, ps, tsr := root.getValue(path, r.getParams)
