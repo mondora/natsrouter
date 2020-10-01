@@ -1,6 +1,7 @@
 package natsrouter
 
 import (
+	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"reflect"
@@ -119,6 +120,134 @@ func TestRouterMulti(t *testing.T) {
 		t.Fatal("routing failed")
 	}
 }
+
+func getRoutingSubscription(subtopic string, star bool) string {
+	var subject string
+	if subtopic == "" {
+		subject = "ROUTING.v2"
+	} else {
+		subject = fmt.Sprintf("%s.%s", "ROUTING.v2", subtopic)
+	}
+	if star {
+		return subject + ".>"
+	}
+	return subject
+}
+
+func TestRouterMulti2(t *testing.T) {
+	router := New()
+	routed := false
+	result := "N/A"
+	router.Handle("SUB", getRoutingSubscription(":context", true), func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		assert.True(t, len(ps) > 0)
+		assert.Equal(t, "context", ps[0].Key)
+		assert.Equal(t, "HR", ps[0].Value)
+		result = msg.Subject //getRoutingSubscription("*", true)
+	})
+	// TODO complete
+	msg := &nats.Msg{
+		Subject: "ROUTING.v2.HR.AnagraficheDipendenti_Paghe_HRportal",
+		//Subject: "ROUTING.v2.ROUTING.>",
+	}
+	_ = router.ServeNATS(msg)
+	assert.True(t, routed)
+	if !routed {
+		t.Fatal("routing failed")
+	}
+	assert.Equal(t, "ROUTING.v2.HR.AnagraficheDipendenti_Paghe_HRportal", result)
+}
+
+func TestRouterMulti2b(t *testing.T) {
+	router := New()
+	routed := false
+	result := "N/A"
+	routingSubs := getRoutingSubscription("*", true)
+	assert.Equal(t, "ROUTING.v2.*.>", routingSubs)
+	router.Handle("SUB", getRoutingSubscription("*", true), func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		assert.True(t, len(ps) > 0)
+		assert.Equal(t, "p1", ps[0].Key)
+		assert.Equal(t, "BI", ps[0].Value)
+		result = msg.Subject //getRoutingSubscription("*", true)
+	})
+	// TODO complete
+	msg := &nats.Msg{
+		Subject: "ROUTING.v2.BI.ScambioFile_TSX_BI",
+		//Subject: "ROUTING.v2.ROUTING.>",
+	}
+	_ = router.ServeNATS(msg)
+	assert.True(t, routed)
+	if !routed {
+		t.Fatal("routing failed")
+	}
+	assert.Equal(t, "ROUTING.v2.BI.ScambioFile_TSX_BI", result)
+}
+
+/*
+func TestRouterMulti22(t *testing.T) {
+	router := New()
+	routed := false
+	result := "N/A"
+	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "AAA.>"
+	})
+	router.Handle("SUB", "ROUTING.v2.FEEDBACK.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "ROUTING.v2.FEEDBACK.>"
+	})
+	router.Handle("SUB", "ROUTING.v2.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "ROUTING.v2.>"
+	})
+	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "ZZZ.>"
+	})
+	msg := &nats.Msg{
+		Subject: "ROUTING.v2.FEEDBACK.test>",
+	}
+	_ = router.ServeNATS(msg)
+	assert.True(t, routed)
+	if !routed {
+		t.Fatal("routing failed")
+	}
+	assert.Equal(t, "ROUTING.v2.FEEDBACK.>", result)
+}
+*/
+/*
+func TestRouterMulti3(t *testing.T) {
+	router := New()
+	routed := false
+	result := "N/A"
+	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "AAA.>"
+	})
+	router.Handle("SUB", "ROUTING.v2.FEEDBACK.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "ROUTING.v2.FEEDBACK.>"
+	})
+	router.Handle("SUB", "ROUTING.v2.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "ROUTING.v2.>"
+	})
+	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+		routed = true
+		result = "ZZZ.>"
+	})
+	msg := &nats.Msg{
+		Subject: "ROUTING.v2.>",
+	}
+	_ = router.ServeNATS(msg)
+	assert.True(t, routed)
+	if !routed {
+		t.Fatal("routing failed")
+	}
+	assert.Equal(t, "ROUTING.v2.>", result)
+}
+*/
 
 func TestRouterInvalidInput(t *testing.T) {
 	router := New()
