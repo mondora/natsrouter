@@ -42,7 +42,7 @@ func TestRouter(t *testing.T) {
 	router := New()
 
 	routed := false
-	router.Handle("SUB", "user.:name", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("user.:name", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		want := Params{Param{"name", "gopher"}}
 		if !reflect.DeepEqual(ps, want) {
@@ -64,7 +64,7 @@ func TestRouterCatchAll(t *testing.T) {
 	router := New()
 
 	routed := false
-	router.Handle("SUB", "user.*.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("user.*.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		//want := Params{Param{">", ".gopher.ok"}}
 		want := Params{
@@ -89,7 +89,7 @@ func TestRouterCatchAll(t *testing.T) {
 func TestRouterMulti(t *testing.T) {
 	router := New()
 	routed := false
-	router.Handle("SUB", "confirm-subsbscription.:mongoid.:correlationid.:pincode.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("confirm-subsbscription.:mongoid.:correlationid.:pincode.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		want := Params{
 			Param{"mongoid", "1234"},
@@ -102,7 +102,7 @@ func TestRouterMulti(t *testing.T) {
 			}
 		}
 	})
-	router.Handle("SUB", "reset-subsbscription.:mongoid.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("reset-subsbscription.:mongoid.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		want := Params{
 			Param{"mongoid", "1234"},
@@ -138,7 +138,7 @@ func TestRouterMulti2(t *testing.T) {
 	router := New()
 	routed := false
 	result := "N/A"
-	router.Handle("SUB", getRoutingSubscription(":context", true), func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle(getRoutingSubscription(":context", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "context", ps[0].Key)
@@ -164,7 +164,7 @@ func TestRouterMulti2b(t *testing.T) {
 	result := "N/A"
 	routingSubs := getRoutingSubscription("*", true)
 	assert.Equal(t, "ROUTING.v2.*.>", routingSubs)
-	router.Handle("SUB", getRoutingSubscription("*", true), func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle(getRoutingSubscription("*", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "p1", ps[0].Key)
@@ -184,24 +184,23 @@ func TestRouterMulti2b(t *testing.T) {
 	assert.Equal(t, "ROUTING.v2.BI.ScambioFile_TSX_BI", result)
 }
 
-/*
 func TestRouterMulti22(t *testing.T) {
 	router := New()
 	routed := false
 	result := "N/A"
-	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "AAA.>"
 	})
-	router.Handle("SUB", "ROUTING.v2.FEEDBACK.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "ROUTING.v2.FEEDBACK.>"
 	})
-	router.Handle("SUB", "ROUTING.v2.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "ROUTING.v2.>"
 	})
-	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "ZZZ.>"
 	})
@@ -215,25 +214,24 @@ func TestRouterMulti22(t *testing.T) {
 	}
 	assert.Equal(t, "ROUTING.v2.FEEDBACK.>", result)
 }
-*/
-/*
+
 func TestRouterMulti3(t *testing.T) {
 	router := New()
 	routed := false
 	result := "N/A"
-	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "AAA.>"
 	})
-	router.Handle("SUB", "ROUTING.v2.FEEDBACK.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "ROUTING.v2.FEEDBACK.>"
 	})
-	router.Handle("SUB", "ROUTING.v2.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "ROUTING.v2.>"
 	})
-	router.Handle("SUB", "AAA.>", func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
 		routed = true
 		result = "ZZZ.>"
 	})
@@ -247,12 +245,11 @@ func TestRouterMulti3(t *testing.T) {
 	}
 	assert.Equal(t, "ROUTING.v2.>", result)
 }
-*/
 
 func TestRouterInvalidInput(t *testing.T) {
 	router := New()
 	recv := catchPanic(func() {
-		router.Handle("SUB", "input.>", nil)
+		router.Handle("input.>", 1, nil)
 	})
 	if recv == nil {
 		t.Fatal("registering empty method did not panic")
@@ -263,25 +260,37 @@ func BenchmarkAllowed(b *testing.B) {
 	handlerFunc := func(_ *nats.Msg, _ Params, _ interface{}) {}
 
 	router := New()
-	router.Handle("SUB", "path", handlerFunc)
-	router.Handle("SUB", "path.foo.>", handlerFunc)
+	router.Handle("path", 1, handlerFunc)
+	router.Handle("path.foo.>", 1, handlerFunc)
 
 	b.Run("Global", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			_ = router.allowed("*", "SUB")
+			_ = router.allowed("*", 1)
 		}
 	})
 	b.Run("Path", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			_ = router.allowed("path", "SUB")
+			_ = router.allowed("path", 1)
 		}
 	})
 	b.Run("Path", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			_ = router.allowed("path.foo.>", "SUB")
+			_ = router.allowed("path.foo.>", 1)
 		}
 	})
+}
+
+func TestRankList(t *testing.T) {
+	r := New()
+	r.rankIndexList = []int{2, 4, 1, 3}
+	assert.False(t, r.initialized)
+	rankList := r.getRankList()
+	assert.True(t, r.initialized)
+	assert.Equal(t, 1, rankList[0])
+	assert.Equal(t, 2, rankList[1])
+	assert.Equal(t, 3, rankList[2])
+	assert.Equal(t, 4, rankList[3])
 }
