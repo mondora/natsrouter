@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/nats-io/nats.go"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -64,7 +66,8 @@ func (ps Params) MatchedRoutePath() string {
 // Router is a handler which can be used to dispatch requests to different
 // handler functions via configurable routes
 type Router struct {
-	trees map[string]*node
+	trees map[int]*node
+	// rank map start from priority 1 to max 255
 
 	paramsPool sync.Pool
 	maxParams  uint16
@@ -75,8 +78,12 @@ type Router struct {
 	// registered when this option was enabled.
 	SaveMatchedRoutePath bool
 
-	// Cached value of global (*) allowed methods
+	// Cached value of global (*) allowed ranks
 	globalAllowed string
+
+	// sorted rank list
+	rankIndexList []int
+	initialized   bool
 
 	// Function to handle panics recovered from NATS handlers.
 	// The handler can be used to keep your server from crashing because of
@@ -87,7 +94,10 @@ type Router struct {
 // New returns a new initialized Router.
 // Path auto-correction, including trailing slashes, is enabled by default.
 func New() *Router {
-	return &Router{}
+	return &Router{
+		initialized:   false,
+		rankIndexList: make([]int, 0, 5),
+	}
 }
 
 func (r *Router) getParams() *Params {
@@ -118,11 +128,11 @@ func (r *Router) saveMatchedRoutePath(path string, handle Handle) Handle {
 }
 
 // Handle registers a new request handle with the given path.
-func (r *Router) Handle(method, path string, handle Handle) {
+func (r *Router) Handle(path string, rank int, handle Handle) {
 	varsCount := uint16(0)
 
-	if method == "" {
-		panic("method must not be empty")
+	if rank <= 0 || rank > 255 {
+		panic("rank must be > 0")
 	}
 	if handle == nil {
 		panic("handle must not be nil")
@@ -135,15 +145,15 @@ func (r *Router) Handle(method, path string, handle Handle) {
 	}
 
 	if r.trees == nil {
-		r.trees = make(map[string]*node)
+		r.trees = make(map[int]*node)
 	}
 
-	root := r.trees[method]
+	root := r.trees[rank]
 	if root == nil {
 		root = new(node)
-		r.trees[method] = root
+		r.trees[rank] = root
 
-		r.globalAllowed = r.allowed("*", "")
+		r.globalAllowed = r.allowed("*", 0)
 	}
 
 	root.addRoute(path, handle)
@@ -162,12 +172,12 @@ func (r *Router) Handle(method, path string, handle Handle) {
 	}
 }
 
-// Lookup allows the manual lookup of a method + path combo.
+// Lookup allows the manual lookup of a rank + path combo.
 // This is e.g. useful to build a framework around this router.
 // If the path was found, it returns the handle function and the path parameter
 // values.
-func (r *Router) Lookup(method, path string) (Handle, Params, bool) {
-	if root := r.trees[method]; root != nil {
+func (r *Router) Lookup(path string, rank int) (Handle, Params, bool) {
+	if root := r.trees[rank]; root != nil {
 		handle, ps, tsr := root.getValue(path, r.getParams)
 		if handle == nil {
 			r.putParams(ps)
@@ -181,36 +191,36 @@ func (r *Router) Lookup(method, path string) (Handle, Params, bool) {
 	return nil, nil, false
 }
 
-func (r *Router) allowed(path, reqMethod string) (allow string) {
-	allowed := make([]string, 0, 9)
+func (r *Router) allowed(path string, reqRank int) (allow string) {
+	allowed := make([]int, 0, 9)
 
 	if path == "*" { // server-wide
-		// empty method is used for internal calls to refresh the cache
-		if reqMethod == "" {
-			for method := range r.trees {
-				// Add request method to list of allowed methods
-				allowed = append(allowed, method)
+		// 0 rank is used for internal calls to refresh the cache
+		if reqRank == 0 {
+			for rank := range r.trees {
+				// Add request rank to list of allowed ranks
+				allowed = append(allowed, rank)
 			}
 		} else {
 			return r.globalAllowed
 		}
 	} else { // specific path
-		for method := range r.trees {
-			// Skip the requested method - we already tried this one
-			if method == reqMethod {
+		for rank := range r.trees {
+			// Skip the requested rank - we already tried this one
+			if rank == reqRank {
 				continue
 			}
 
-			handle, _, _ := r.trees[method].getValue(path, nil)
+			handle, _, _ := r.trees[rank].getValue(path, nil)
 			if handle != nil {
-				// Add request method to list of allowed methods
-				allowed = append(allowed, method)
+				// Add request rank to list of allowed ranks
+				allowed = append(allowed, rank)
 			}
 		}
 	}
 
 	if len(allowed) > 0 {
-		// Sort allowed methods.
+		// Sort allowed ranks.
 		// sort.Strings(allowed) unfortunately causes unnecessary allocations
 		// due to allowed being moved to the heap and interface conversion
 		for i, l := 1, len(allowed); i < l; i++ {
@@ -220,7 +230,13 @@ func (r *Router) allowed(path, reqMethod string) (allow string) {
 		}
 
 		// return as comma separated list
-		return strings.Join(allowed, ", ")
+		allowedStr := []string{}
+		for i := range allowed {
+			prio := allowed[i]
+			ptxt := strconv.Itoa(int(prio))
+			allowedStr = append(allowedStr, ptxt)
+		}
+		return strings.Join(allowedStr, ", ")
 	}
 	return ""
 }
@@ -231,6 +247,17 @@ func (r *Router) recv(msg *nats.Msg) {
 	}
 }
 
+func (r *Router) getRankList() []int {
+	if !r.initialized {
+		for rank := range r.trees {
+			r.rankIndexList = append(r.rankIndexList, rank)
+		}
+		sort.Ints(r.rankIndexList)
+		r.initialized = true
+	}
+	return r.rankIndexList
+}
+
 // ServeNATS makes the router implement interface.
 func (r *Router) ServeNATS(msg *nats.Msg) error {
 	if r.PanicHandler != nil {
@@ -239,15 +266,18 @@ func (r *Router) ServeNATS(msg *nats.Msg) error {
 
 	path := msg.Subject
 
-	if root := r.trees["SUB"]; root != nil {
-		if handle, ps, _ := root.getValue(path, r.getParams); handle != nil {
-			if ps != nil {
-				handle(msg, *ps, nil)
-				r.putParams(ps)
-			} else {
-				handle(msg, nil, nil)
+	rankList := r.getRankList()
+	for _, rank := range rankList {
+		if root := r.trees[rank]; root != nil {
+			if handle, ps, _ := root.getValue(path, r.getParams); handle != nil {
+				if ps != nil {
+					handle(msg, *ps, nil)
+					r.putParams(ps)
+				} else {
+					handle(msg, nil, nil)
+				}
+				return nil
 			}
-			return nil
 		}
 	}
 	// Handle 404
@@ -261,15 +291,18 @@ func (r *Router) ServeNATSWithPayload(msg *nats.Msg, payload interface{}) error 
 
 	path := msg.Subject
 
-	if root := r.trees["SUB"]; root != nil {
-		if handle, ps, _ := root.getValue(path, r.getParams); handle != nil {
-			if ps != nil {
-				handle(msg, *ps, payload)
-				r.putParams(ps)
-			} else {
-				handle(msg, nil, payload)
+	rankList := r.getRankList()
+	for _, rank := range rankList {
+		if root := r.trees[rank]; root != nil {
+			if handle, ps, _ := root.getValue(path, r.getParams); handle != nil {
+				if ps != nil {
+					handle(msg, *ps, payload)
+					r.putParams(ps)
+				} else {
+					handle(msg, nil, payload)
+				}
+				return nil
 			}
-			return nil
 		}
 	}
 	// Handle 404

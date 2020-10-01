@@ -18,12 +18,12 @@ import "github.com/mondora/natsrouter"
 func (cfg *Config) SubscribeListener() {
 	cfg.nmux = natsrouter.New()
     // "input.:guid.v1.ping.>" OR "input.*.v1.ping.>"
-    cfg.nmux.Handle("SUB", "input.*.v1.ping.>", func(msg *nats.Msg, ps natsrouter.Params, message interface{}) {
+    cfg.nmux.Handle("input.*.v1.ping.>", 1, func(msg *nats.Msg, ps natsrouter.Params, message interface{}) {
         m := message.(*Pipeline)
         m.processPing()
     })
     // "input.:guid.v1.msg.>" (OR "input.*.v1.msg.>")
-    cfg.nmux.Handle("SUB", "input.*.v1.msg.>", func(msg *nats.Msg, ps natsrouter.Params, message interface{}) {
+    cfg.nmux.Handle("input.*.v1.msg.>", 1, func(msg *nats.Msg, ps natsrouter.Params, message interface{}) {
         m := message.(*Pipeline)
         m.processMessage()
     })
