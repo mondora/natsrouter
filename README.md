@@ -21,20 +21,20 @@ import (
 )
 
 type Config struct {
-	nmux *natsrouter.Router
+    nmux *natsrouter.Router
     // ...
 }
 
 type Pipeline struct {
-	cfg *Config
-	msg *nats.Msg
+    cfg *Config
+    msg *nats.Msg
 }
 
 func NewListenerPipeline(cfg *Config, msg *nats.Msg) *Pipeline {
-	return &Pipeline{
-		cfg:   cfg,
-		msg:   msg,
-	}
+    return &Pipeline{
+        cfg:   cfg,
+        msg:   msg,
+    }
 }
 
 func (*p Pipeline) processPing() {
@@ -66,12 +66,12 @@ func (cfg *Config) SubscribeListener() {
 }
 
 func (cfg *Config) listenerHandler(msg *nats.Msg) {
-	message := NewListenerPipeline(cfg, msg)
+    message := NewListenerPipeline(cfg, msg)
     // manages incoming NATS message, scanning binary tree for all defined rank
-	err := cfg.nmux.ServeNATSWithPayload(msg, message)
-	if err != nil {
-		// 404 Not Found
-	}
+    err := cfg.nmux.ServeNATSWithPayload(msg, message)
+    if err != nil {
+        // 404 Not Found
+    }
 }
 
 func main() {
