@@ -58,11 +58,11 @@ func (cfg *Config) SubscribeListener() {
         m := message.(*Pipeline)
         m.processDefault()
     })
-    ...
+    // ...
     // queue subscribe subject must be a larger than the subjects related to the various Handlers
     // es. "input.*.v1.>" is wider than "input.*.v1.msg.>"
     _, err := cfg.natsCli.QueueSubscribe("input.*.v1.>", queueName, cfg.listenerHandler)
-    ...
+    // ...
 }
 
 func (cfg *Config) listenerHandler(msg *nats.Msg) {
