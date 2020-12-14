@@ -143,6 +143,8 @@ func TestRouterMulti2(t *testing.T) {
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "context", ps[0].Key)
 		assert.Equal(t, "HR", ps[0].Value)
+		assert.Equal(t, ">", ps[1].Key)
+		assert.Equal(t, ".AnagraficheDipendenti_Paghe_HRportal", ps[1].Value)
 		result = msg.Subject //getRoutingSubscription("*", true)
 	})
 	// TODO complete
