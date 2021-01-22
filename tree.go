@@ -107,7 +107,7 @@ func (n *node) addRoute(path string, handle Handle) {
 	n.priority++
 
 	// Empty tree
-	if n.path == "" && n.indices == "" {
+	if len(n.path) == 0 && len(n.indices) == 0 {
 		n.insertChild(path, fullPath, handle)
 		n.nType = root
 		return
@@ -389,7 +389,7 @@ walk: // Outer loop for walking the tree
 						// No handle found. Check if a handle for this path + a
 						// trailing slash exists for TSR recommendation
 						n = n.children[0]
-						tsr = (n.path == "." && n.handle != nil) || (n.path == "" && n.indices == ".")
+						tsr = (n.path == "." && n.handle != nil) || (len(n.path) == 0 && n.indices == ".")
 					}
 
 					return
