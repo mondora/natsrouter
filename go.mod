@@ -1,6 +1,6 @@
 module github.com/mondora/natsrouter
 
-go 1.15
+go 1.16
 
 require (
 	github.com/nats-io/nats-server/v2 v2.1.9 // indirect
