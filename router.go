@@ -271,10 +271,14 @@ func (r *Router) ServeNATS(msg *nats.Msg) error {
 		if root := r.trees[rank]; root != nil {
 			if handle, ps, _ := root.getValue(path, r.getParams); handle != nil {
 				if ps != nil {
-					handle(msg, *ps, nil)
-					r.putParams(ps)
+					go func() {
+						handle(msg, *ps, nil)
+						r.putParams(ps)
+					}()
 				} else {
-					handle(msg, nil, nil)
+					go func() {
+						handle(msg, nil, nil)
+					}()
 				}
 				return nil
 			}
@@ -296,10 +300,14 @@ func (r *Router) ServeNATSWithPayload(msg *nats.Msg, payload interface{}) error 
 		if root := r.trees[rank]; root != nil {
 			if handle, ps, _ := root.getValue(path, r.getParams); handle != nil {
 				if ps != nil {
-					handle(msg, *ps, payload)
-					r.putParams(ps)
+					go func() {
+						handle(msg, *ps, payload)
+						r.putParams(ps)
+					}()
 				} else {
-					handle(msg, nil, payload)
+					go func() {
+						handle(msg, nil, payload)
+					}()
 				}
 				return nil
 			}

@@ -5,6 +5,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -41,8 +42,11 @@ func TestParams(t *testing.T) {
 func TestRouter(t *testing.T) {
 	router := New()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	routed := false
 	router.Handle("user.:name", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		want := Params{Param{"name", "gopher"}}
 		if !reflect.DeepEqual(ps, want) {
@@ -54,6 +58,7 @@ func TestRouter(t *testing.T) {
 		Subject: "user.gopher",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
@@ -63,8 +68,11 @@ func TestRouter(t *testing.T) {
 func TestRouterCatchAll(t *testing.T) {
 	router := New()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	routed := false
 	router.Handle("user.*.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		//want := Params{Param{">", ".gopher.ok"}}
 		want := Params{
@@ -80,6 +88,7 @@ func TestRouterCatchAll(t *testing.T) {
 		Subject: "user.gopher.star.ok",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
@@ -88,8 +97,11 @@ func TestRouterCatchAll(t *testing.T) {
 
 func TestRouterMulti(t *testing.T) {
 	router := New()
+	var wg sync.WaitGroup
+	wg.Add(1) // one request (2 handlers)
 	routed := false
 	router.Handle("confirm-subsbscription.:mongoid.:correlationid.:pincode.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		want := Params{
 			Param{"mongoid", "1234"},
@@ -103,6 +115,7 @@ func TestRouterMulti(t *testing.T) {
 		}
 	})
 	router.Handle("reset-subsbscription.:mongoid.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		want := Params{
 			Param{"mongoid", "1234"},
@@ -115,6 +128,7 @@ func TestRouterMulti(t *testing.T) {
 		Subject: "confirm-subsbscription.1234.5678.1111.>",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
@@ -138,7 +152,10 @@ func TestRouterMulti2(t *testing.T) {
 	router := New()
 	routed := false
 	result := "N/A"
+	var wg sync.WaitGroup
+	wg.Add(1)
 	router.Handle(getRoutingSubscription(":context", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "context", ps[0].Key)
@@ -153,6 +170,7 @@ func TestRouterMulti2(t *testing.T) {
 		//Subject: "ROUTING.v2.ROUTING.>",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
@@ -166,7 +184,10 @@ func TestRouterMulti2b(t *testing.T) {
 	result := "N/A"
 	routingSubs := getRoutingSubscription("*", true)
 	assert.Equal(t, "ROUTING.v2.*.>", routingSubs)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	router.Handle(getRoutingSubscription("*", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "p1", ps[0].Key)
@@ -179,6 +200,7 @@ func TestRouterMulti2b(t *testing.T) {
 		//Subject: "ROUTING.v2.ROUTING.>",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
@@ -190,19 +212,25 @@ func TestRouterMulti22(t *testing.T) {
 	router := New()
 	routed := false
 	result := "N/A"
+	var wg sync.WaitGroup
+	wg.Add(1)
 	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "AAA.>"
 	})
 	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.FEEDBACK.>"
 	})
 	router.Handle("ROUTING.v2.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.>"
 	})
 	router.Handle("AAA.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "ZZZ.>"
 	})
@@ -210,6 +238,7 @@ func TestRouterMulti22(t *testing.T) {
 		Subject: "ROUTING.v2.FEEDBACK.test>",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
@@ -221,19 +250,25 @@ func TestRouterMulti3(t *testing.T) {
 	router := New()
 	routed := false
 	result := "N/A"
+	var wg sync.WaitGroup
+	wg.Add(1)
 	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "AAA.>"
 	})
 	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.FEEDBACK.>"
 	})
 	router.Handle("ROUTING.v2.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.>"
 	})
 	router.Handle("AAA.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+		defer wg.Done()
 		routed = true
 		result = "ZZZ.>"
 	})
@@ -241,6 +276,7 @@ func TestRouterMulti3(t *testing.T) {
 		Subject: "ROUTING.v2.>",
 	}
 	_ = router.ServeNATS(msg)
+	wg.Wait()
 	assert.True(t, routed)
 	if !routed {
 		t.Fatal("routing failed")
