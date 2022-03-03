@@ -10,7 +10,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/nats-io/nats-server/v2 v2.7.2 // indirect
+	github.com/nats-io/nats-server/v2 v2.7.3 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
