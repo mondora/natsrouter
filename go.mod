@@ -4,11 +4,11 @@ go 1.18
 
 require (
 	github.com/nats-io/nats.go v1.16.0
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.8.0
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.8.4 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
