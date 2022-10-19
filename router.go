@@ -3,7 +3,6 @@ package natsrouter
 import (
 	"errors"
 	"fmt"
-	"github.com/nats-io/nats.go"
 	"regexp"
 	"sort"
 	"strconv"
@@ -11,9 +10,14 @@ import (
 	"sync"
 )
 
+type SubjectMsg interface {
+	GetMsg() interface{}
+	GetSubject() string
+}
+
 // Handle is a function that can be registered to a route to handle NATS
 // requests. It has a third parameter for the values of wildcards (path variables).
-type Handle func(*nats.Msg, Params, interface{})
+type Handle func(SubjectMsg, Params, interface{})
 
 // Param is a single parameter, consisting of a key and a value.
 type Param struct {
@@ -88,7 +92,7 @@ type Router struct {
 	// Function to handle panics recovered from NATS handlers.
 	// The handler can be used to keep your server from crashing because of
 	// unrecovered panics.
-	PanicHandler func(*nats.Msg, interface{})
+	PanicHandler func(SubjectMsg, interface{})
 }
 
 // New returns a new initialized Router.
@@ -113,7 +117,7 @@ func (r *Router) putParams(ps *Params) {
 }
 
 func (r *Router) saveMatchedRoutePath(path string, handle Handle) Handle {
-	return func(msg *nats.Msg, ps Params, payload interface{}) {
+	return func(msg SubjectMsg, ps Params, payload interface{}) {
 		if ps == nil {
 			psp := r.getParams()
 			ps := (*psp)[0:1]
@@ -241,7 +245,7 @@ func (r *Router) allowed(path string, reqRank int) (allow string) {
 	return ""
 }
 
-func (r *Router) recv(msg *nats.Msg) {
+func (r *Router) recv(msg SubjectMsg) {
 	if rcv := recover(); rcv != nil {
 		r.PanicHandler(msg, rcv)
 	}
@@ -259,12 +263,12 @@ func (r *Router) getRankList() []int {
 }
 
 // ServeNATS makes the router implement interface.
-func (r *Router) ServeNATS(msg *nats.Msg) error {
+func (r *Router) ServeNATS(msg SubjectMsg) error {
 	if r.PanicHandler != nil {
 		defer r.recv(msg)
 	}
 
-	path := msg.Subject
+	path := msg.GetSubject()
 
 	rankList := r.getRankList()
 	for _, rank := range rankList {
@@ -288,12 +292,12 @@ func (r *Router) ServeNATS(msg *nats.Msg) error {
 	return errors.New("404 NotFound")
 }
 
-func (r *Router) ServeNATSWithPayload(msg *nats.Msg, payload interface{}) error {
+func (r *Router) ServeNATSWithPayload(msg SubjectMsg, payload interface{}) error {
 	if r.PanicHandler != nil {
 		defer r.recv(msg)
 	}
 
-	path := msg.Subject
+	path := msg.GetSubject()
 
 	rankList := r.getRankList()
 	for _, rank := range rankList {

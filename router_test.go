@@ -9,6 +9,32 @@ import (
 	"testing"
 )
 
+type Msg struct {
+	msg interface{}
+	sub string
+}
+
+func (m *Msg) GetMsg() interface{} {
+	return m.msg
+}
+
+func (m *Msg) GetSubject() string {
+	return m.sub
+}
+
+func NewMessage(subject string) SubjectMsg {
+	natsMsg := &nats.Msg{
+		Subject: subject,
+	}
+	var msg SubjectMsg
+	msg = &Msg{
+		msg: natsMsg,
+		sub: natsMsg.Subject,
+	}
+
+	return msg
+}
+
 func catchPanic(testFunc func()) (recv interface{}) {
 	defer func() {
 		recv = recover()
@@ -45,7 +71,7 @@ func TestRouter(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	routed := false
-	router.Handle("user.:name", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("user.:name", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		want := Params{Param{"name", "gopher"}}
@@ -54,9 +80,7 @@ func TestRouter(t *testing.T) {
 		}
 	})
 
-	msg := &nats.Msg{
-		Subject: "user.gopher",
-	}
+	msg := NewMessage("user.gopher")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -71,7 +95,7 @@ func TestRouterCatchAll(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	routed := false
-	router.Handle("user.*.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("user.*.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		//want := Params{Param{">", ".gopher.ok"}}
@@ -84,9 +108,7 @@ func TestRouterCatchAll(t *testing.T) {
 		}
 	})
 
-	msg := &nats.Msg{
-		Subject: "user.gopher.star.ok",
-	}
+	msg := NewMessage("user.gopher.star.ok")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -100,7 +122,7 @@ func TestRouterMulti(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1) // one request (2 handlers)
 	routed := false
-	router.Handle("confirm-subsbscription.:mongoid.:correlationid.:pincode.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("confirm-subsbscription.:mongoid.:correlationid.:pincode.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		want := Params{
@@ -114,7 +136,7 @@ func TestRouterMulti(t *testing.T) {
 			}
 		}
 	})
-	router.Handle("reset-subsbscription.:mongoid.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("reset-subsbscription.:mongoid.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		want := Params{
@@ -124,9 +146,7 @@ func TestRouterMulti(t *testing.T) {
 			t.Fatalf("wrong wildcard values: want %v, got %v", want, ps)
 		}
 	})
-	msg := &nats.Msg{
-		Subject: "confirm-subsbscription.1234.5678.1111.>",
-	}
+	msg := NewMessage("confirm-subsbscription.1234.5678.1111.>")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -154,7 +174,7 @@ func TestRouterMulti2(t *testing.T) {
 	result := "N/A"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	router.Handle(getRoutingSubscription(":context", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle(getRoutingSubscription(":context", true), 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		assert.True(t, len(ps) > 0)
@@ -162,13 +182,10 @@ func TestRouterMulti2(t *testing.T) {
 		assert.Equal(t, "HR", ps[0].Value)
 		assert.Equal(t, ">", ps[1].Key)
 		assert.Equal(t, ".AnagraficheDipendenti_Paghe_HRportal", ps[1].Value)
-		result = msg.Subject //getRoutingSubscription("*", true)
+		result = msg.GetSubject() //getRoutingSubscription("*", true)
 	})
 	// TODO complete
-	msg := &nats.Msg{
-		Subject: "ROUTING.v2.HR.AnagraficheDipendenti_Paghe_HRportal",
-		//Subject: "ROUTING.v2.ROUTING.>",
-	}
+	msg := NewMessage("ROUTING.v2.HR.AnagraficheDipendenti_Paghe_HRportal")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -186,19 +203,16 @@ func TestRouterMulti2b(t *testing.T) {
 	assert.Equal(t, "ROUTING.v2.*.>", routingSubs)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	router.Handle(getRoutingSubscription("*", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle(getRoutingSubscription("*", true), 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "p1", ps[0].Key)
 		assert.Equal(t, "BI", ps[0].Value)
-		result = msg.Subject //getRoutingSubscription("*", true)
+		result = msg.GetSubject() //getRoutingSubscription("*", true)
 	})
 	// TODO complete
-	msg := &nats.Msg{
-		Subject: "ROUTING.v2.BI.ScambioFile_TSX_BI",
-		//Subject: "ROUTING.v2.ROUTING.>",
-	}
+	msg := NewMessage("ROUTING.v2.BI.ScambioFile_TSX_BI")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -214,29 +228,27 @@ func TestRouterMulti22(t *testing.T) {
 	result := "N/A"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "AAA.>"
 	})
-	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.FEEDBACK.>"
 	})
-	router.Handle("ROUTING.v2.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.>", 2, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.>"
 	})
-	router.Handle("AAA.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 2, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "ZZZ.>"
 	})
-	msg := &nats.Msg{
-		Subject: "ROUTING.v2.FEEDBACK.test>",
-	}
+	msg := NewMessage("ROUTING.v2.FEEDBACK.test>")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -252,29 +264,27 @@ func TestRouterMulti3(t *testing.T) {
 	result := "N/A"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "AAA.>"
 	})
-	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.FEEDBACK.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.FEEDBACK.>"
 	})
-	router.Handle("ROUTING.v2.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("ROUTING.v2.>", 2, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "ROUTING.v2.>"
 	})
-	router.Handle("AAA.>", 2, func(msg *nats.Msg, ps Params, _ interface{}) {
+	router.Handle("AAA.>", 2, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
 		result = "ZZZ.>"
 	})
-	msg := &nats.Msg{
-		Subject: "ROUTING.v2.>",
-	}
+	msg := NewMessage("ROUTING.v2.>")
 	_ = router.ServeNATS(msg)
 	wg.Wait()
 	assert.True(t, routed)
@@ -295,7 +305,7 @@ func TestRouterInvalidInput(t *testing.T) {
 }
 
 func BenchmarkAllowed(b *testing.B) {
-	handlerFunc := func(_ *nats.Msg, _ Params, _ interface{}) {}
+	handlerFunc := func(_ SubjectMsg, _ Params, _ interface{}) {}
 
 	router := New()
 	router.Handle("path", 1, handlerFunc)
