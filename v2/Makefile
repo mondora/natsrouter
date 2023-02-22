@@ -7,8 +7,11 @@ format:
 	go vet $(shell go list ./... | grep -v /vendor/) && \
 	golangci-lint run --fast --issues-exit-code 1
 
+gofumpt:
+	gofumpt -w -extra -lang 1.20 .
+
 tidy:
-	go mod tidy -compat=1.19
+	go mod tidy -compat=1.20
 
 test:
 	go test -race -covermode=atomic $(shell go list ./... | grep -v /vendor/)

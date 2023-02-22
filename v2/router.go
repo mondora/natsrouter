@@ -41,8 +41,10 @@ func (ps Params) ByName(name string) string {
 	return ""
 }
 
-var reNATSPathCatchAll = regexp.MustCompile(`(.*)\.>$`) // nolint
-var reNATSPathToken = regexp.MustCompile(`(\.\*)`)      // nolint
+var (
+	reNATSPathCatchAll = regexp.MustCompile(`(.*)\.>$`) // nolint
+	reNATSPathToken    = regexp.MustCompile(`(\.\*)`)   // nolint
+)
 
 const subsNATSPath = "$1.*>"
 

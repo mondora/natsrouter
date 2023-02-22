@@ -2,11 +2,12 @@ package natsrouter
 
 import (
 	"fmt"
-	"github.com/nats-io/nats.go"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"sync"
 	"testing"
+
+	"github.com/nats-io/nats.go"
+	"github.com/stretchr/testify/assert"
 )
 
 type Msg struct {
@@ -98,7 +99,7 @@ func TestRouterCatchAll(t *testing.T) {
 	router.Handle("user.*.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
-		//want := Params{Param{">", ".gopher.ok"}}
+		// want := Params{Param{">", ".gopher.ok"}}
 		want := Params{
 			Param{"p1", "gopher"},
 			Param{">", ".star.ok"},
@@ -182,7 +183,7 @@ func TestRouterMulti2(t *testing.T) {
 		assert.Equal(t, "HR", ps[0].Value)
 		assert.Equal(t, ">", ps[1].Key)
 		assert.Equal(t, ".AnagraficheDipendenti_Paghe_HRportal", ps[1].Value)
-		result = msg.GetSubject() //getRoutingSubscription("*", true)
+		result = msg.GetSubject() // getRoutingSubscription("*", true)
 	})
 	// TODO complete
 	msg := NewMessage("ROUTING.v2.HR.AnagraficheDipendenti_Paghe_HRportal")
@@ -209,7 +210,7 @@ func TestRouterMulti2b(t *testing.T) {
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "p1", ps[0].Key)
 		assert.Equal(t, "BI", ps[0].Value)
-		result = msg.GetSubject() //getRoutingSubscription("*", true)
+		result = msg.GetSubject() // getRoutingSubscription("*", true)
 	})
 	// TODO complete
 	msg := NewMessage("ROUTING.v2.BI.ScambioFile_TSX_BI")
