@@ -7,7 +7,7 @@ Trie management derived from Julien Schmidt's [httprouter](https://github.com/ju
 
 ## Install
 ```shell script
-go get github.com/mondora/natsrouter
+go get github.com/mondora/natsrouter/v2
 ```
 
 ## Usage example
@@ -16,7 +16,7 @@ Basic complete example
 
 ```go
 import (
-    "github.com/mondora/natsrouter"
+    "github.com/mondora/natsrouter/v2"
     "fmt"
 )
 

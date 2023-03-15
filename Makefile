@@ -8,7 +8,7 @@ format:
 	golangci-lint run --fast --issues-exit-code 1
 
 tidy:
-	go mod tidy -compat=1.19
+	go mod tidy -compat=1.20
 
 test:
 	go test -race -covermode=atomic $(shell go list ./... | grep -v /vendor/)

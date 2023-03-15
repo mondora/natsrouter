@@ -9,12 +9,17 @@ import (
 	"testing"
 )
 
+const (
+	notAvailable = "N/A"
+)
+
 func catchPanic(testFunc func()) (recv interface{}) {
 	defer func() {
 		recv = recover()
 	}()
 
 	testFunc()
+
 	return
 }
 
@@ -74,7 +79,7 @@ func TestRouterCatchAll(t *testing.T) {
 	router.Handle("user.*.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
 		defer wg.Done()
 		routed = true
-		//want := Params{Param{">", ".gopher.ok"}}
+		// want := Params{Param{">", ".gopher.ok"}}
 		want := Params{
 			Param{"p1", "gopher"},
 			Param{">", ".star.ok"},
@@ -145,13 +150,14 @@ func getRoutingSubscription(subtopic string, star bool) string {
 	if star {
 		return subject + ".>"
 	}
+
 	return subject
 }
 
 func TestRouterMulti2(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	var wg sync.WaitGroup
 	wg.Add(1)
 	router.Handle(getRoutingSubscription(":context", true), 1, func(msg *nats.Msg, ps Params, _ interface{}) {
@@ -181,7 +187,7 @@ func TestRouterMulti2(t *testing.T) {
 func TestRouterMulti2b(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	routingSubs := getRoutingSubscription("*", true)
 	assert.Equal(t, "ROUTING.v2.*.>", routingSubs)
 	var wg sync.WaitGroup
@@ -192,12 +198,12 @@ func TestRouterMulti2b(t *testing.T) {
 		assert.True(t, len(ps) > 0)
 		assert.Equal(t, "p1", ps[0].Key)
 		assert.Equal(t, "BI", ps[0].Value)
-		result = msg.Subject //getRoutingSubscription("*", true)
+		result = msg.Subject // getRoutingSubscription("*", true)
 	})
 	// TODO complete
 	msg := &nats.Msg{
 		Subject: "ROUTING.v2.BI.ScambioFile_TSX_BI",
-		//Subject: "ROUTING.v2.ROUTING.>",
+		// Subject: "ROUTING.v2.ROUTING.>",
 	}
 	_ = router.ServeNATS(msg)
 	wg.Wait()
@@ -211,7 +217,7 @@ func TestRouterMulti2b(t *testing.T) {
 func TestRouterMulti22(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	var wg sync.WaitGroup
 	wg.Add(1)
 	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {
@@ -249,7 +255,7 @@ func TestRouterMulti22(t *testing.T) {
 func TestRouterMulti3(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	var wg sync.WaitGroup
 	wg.Add(1)
 	router.Handle("AAA.>", 1, func(msg *nats.Msg, ps Params, _ interface{}) {

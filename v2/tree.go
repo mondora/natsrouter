@@ -10,6 +10,7 @@ func min(a, b int) int {
 	if a <= b {
 		return a
 	}
+
 	return b
 }
 
@@ -19,6 +20,7 @@ func longestCommonPrefix(a, b string) int {
 	for i < max && a[i] == b[i] {
 		i++
 	}
+
 	return i
 }
 
@@ -42,8 +44,10 @@ func findWildcard(path string) (wildcard string, i int, valid bool) {
 				valid = false
 			}
 		}
+
 		return path[start:], start, valid
 	}
+
 	return "", -1, false
 }
 
@@ -55,6 +59,7 @@ func countParams(path string) uint16 {
 			n++
 		}
 	}
+
 	return uint16(n)
 }
 
@@ -110,6 +115,7 @@ func (n *node) addRoute(path string, handle Handle) {
 	if len(n.path) == 0 && len(n.indices) == 0 {
 		n.insertChild(path, fullPath, handle)
 		n.nType = root
+
 		return
 	}
 
@@ -176,6 +182,7 @@ walk:
 			if n.nType == param && idxc == '.' && len(n.children) == 1 {
 				n = n.children[0]
 				n.priority++
+
 				continue walk
 			}
 
@@ -184,6 +191,7 @@ walk:
 				if c == idxc {
 					i = n.incrementChildPrio(i)
 					n = n.children[i]
+
 					continue walk
 				}
 			}
@@ -198,6 +206,7 @@ walk:
 				n = child
 			}
 			n.insertChild(path, fullPath, handle)
+
 			return
 		}
 
@@ -206,6 +215,7 @@ walk:
 			panic("a handle is already registered for path '" + fullPath + "'")
 		}
 		n.handle = handle
+
 		return
 	}
 }
@@ -262,11 +272,13 @@ func (n *node) insertChild(path, fullPath string, handle Handle) {
 				}
 				n.children = []*node{child}
 				n = child
+
 				continue
 			}
 
 			// Otherwise we're done. Insert the handle in the new leaf
 			n.handle = handle
+
 			return
 		}
 
@@ -335,6 +347,7 @@ walk: // Outer loop for walking the tree
 					for i, c := range []byte(n.indices) {
 						if c == idxc {
 							n = n.children[i]
+
 							continue walk
 						}
 					}
@@ -342,7 +355,8 @@ walk: // Outer loop for walking the tree
 					// Nothing found.
 					// We can recommend to redirect to the same URL without a
 					// trailing slash if a leaf exists for that path.
-					tsr = (path == "." && n.handle != nil)
+					tsr = path == "." && n.handle != nil
+
 					return
 				}
 
@@ -375,11 +389,13 @@ walk: // Outer loop for walking the tree
 						if len(n.children) > 0 {
 							path = path[end:]
 							n = n.children[0]
+
 							continue walk
 						}
 
 						// ... but we can't
-						tsr = (len(path) == end+1)
+						tsr = len(path) == end+1
+
 						return
 					}
 
@@ -410,6 +426,7 @@ walk: // Outer loop for walking the tree
 					}
 
 					handle = n.handle
+
 					return
 
 				default:
@@ -428,6 +445,7 @@ walk: // Outer loop for walking the tree
 			// additional trailing slash
 			if path == "." && n.wildChild && n.nType != root {
 				tsr = true
+
 				return
 			}
 
@@ -438,9 +456,11 @@ walk: // Outer loop for walking the tree
 					n = n.children[i]
 					tsr = (len(n.path) == 1 && n.handle != nil) ||
 						(n.nType == catchAll && n.children[0].handle != nil)
+
 					return
 				}
 			}
+
 			return
 		}
 
@@ -449,6 +469,7 @@ walk: // Outer loop for walking the tree
 		tsr = (path == ".") ||
 			(len(prefix) == len(path)+1 && prefix[len(path)] == '.' &&
 				path == prefix[:len(prefix)-1] && n.handle != nil)
+
 		return
 	}
 }
@@ -520,6 +541,7 @@ walk: // Outer loop for walking the tree
 							// continue with child node
 							n = n.children[i]
 							npLen = len(n.path)
+
 							continue walk
 						}
 					}
@@ -535,6 +557,7 @@ walk: // Outer loop for walking the tree
 						if i := npLen - off; utf8.RuneStart(oldPath[i]) {
 							// read rune from cached path
 							rv, _ = utf8.DecodeRuneInString(oldPath[i:])
+
 							break
 						}
 					}
@@ -558,6 +581,7 @@ walk: // Outer loop for walking the tree
 							); out != nil {
 								return out
 							}
+
 							break
 						}
 					}
@@ -575,6 +599,7 @@ walk: // Outer loop for walking the tree
 								// Continue with child node
 								n = n.children[i]
 								npLen = len(n.path)
+
 								continue walk
 							}
 						}
@@ -586,6 +611,7 @@ walk: // Outer loop for walking the tree
 				if fixTrailingSlash && path == "." && n.handle != nil {
 					return ciPath
 				}
+
 				return nil
 			}
 
@@ -608,6 +634,7 @@ walk: // Outer loop for walking the tree
 						n = n.children[0]
 						npLen = len(n.path)
 						path = path[end:]
+
 						continue
 					}
 
@@ -615,6 +642,7 @@ walk: // Outer loop for walking the tree
 					if fixTrailingSlash && len(path) == end+1 {
 						return ciPath
 					}
+
 					return nil
 				}
 
@@ -628,6 +656,7 @@ walk: // Outer loop for walking the tree
 						return append(ciPath, '.')
 					}
 				}
+
 				return nil
 
 			case catchAll:
@@ -653,10 +682,12 @@ walk: // Outer loop for walking the tree
 							(n.nType == catchAll && n.children[0].handle != nil) {
 							return append(ciPath, '.')
 						}
+
 						return nil
 					}
 				}
 			}
+
 			return nil
 		}
 	}
@@ -672,5 +703,6 @@ walk: // Outer loop for walking the tree
 			return append(ciPath, n.path...)
 		}
 	}
+
 	return nil
 }

@@ -38,12 +38,13 @@ func (ps Params) ByName(name string) string {
 			return p.Value
 		}
 	}
+
 	return ""
 }
 
 var (
-	reNATSPathCatchAll = regexp.MustCompile(`(.*)\.>$`) // nolint
-	reNATSPathToken    = regexp.MustCompile(`(\.\*)`)   // nolint
+	reNATSPathCatchAll = regexp.MustCompile(`(.*)\.>$`)
+	reNATSPathToken    = regexp.MustCompile(`(\.\*)`)
 )
 
 const subsNATSPath = "$1.*>"
@@ -52,9 +53,11 @@ func fromNatsPath(path string) string {
 	i := 0
 	path = reNATSPathToken.ReplaceAllStringFunc(path, func(string) string {
 		i++
+
 		return fmt.Sprintf(".:p%d", i)
 	})
 	result := reNATSPathCatchAll.ReplaceAllString(path, subsNATSPath)
+
 	return result
 }
 
@@ -107,9 +110,13 @@ func New() *Router {
 }
 
 func (r *Router) getParams() *Params {
-	ps := r.paramsPool.Get().(*Params)
-	*ps = (*ps)[0:0] // reset slice
-	return ps
+	if ps, ok := r.paramsPool.Get().(*Params); ok {
+		*ps = (*ps)[0:0] // reset slice
+
+		return ps
+	}
+
+	return nil
 }
 
 func (r *Router) putParams(ps *Params) {
@@ -173,6 +180,7 @@ func (r *Router) Handle(path string, rank int, handle Handle) {
 	if r.paramsPool.New == nil && r.maxParams > 0 {
 		r.paramsPool.New = func() interface{} {
 			ps := make(Params, 0, r.maxParams)
+
 			return &ps
 		}
 	}
@@ -187,13 +195,16 @@ func (r *Router) Lookup(path string, rank int) (Handle, Params, bool) {
 		handle, ps, tsr := root.getValue(path, r.getParams)
 		if handle == nil {
 			r.putParams(ps)
+
 			return nil, nil, tsr
 		}
 		if ps == nil {
 			return handle, nil, tsr
 		}
+
 		return handle, *ps, tsr
 	}
+
 	return nil, nil, false
 }
 
@@ -239,11 +250,13 @@ func (r *Router) allowed(path string, reqRank int) (allow string) {
 		allowedStr := []string{}
 		for i := range allowed {
 			prio := allowed[i]
-			ptxt := strconv.Itoa(int(prio))
+			ptxt := strconv.Itoa(prio)
 			allowedStr = append(allowedStr, ptxt)
 		}
+
 		return strings.Join(allowedStr, ", ")
 	}
+
 	return ""
 }
 
@@ -261,6 +274,7 @@ func (r *Router) getRankList() []int {
 		sort.Ints(r.rankIndexList)
 		r.initialized = true
 	}
+
 	return r.rankIndexList
 }
 
@@ -286,6 +300,7 @@ func (r *Router) ServeNATS(msg SubjectMsg) error {
 						handle(msg, nil, nil)
 					}()
 				}
+
 				return nil
 			}
 		}
@@ -315,6 +330,7 @@ func (r *Router) ServeNATSWithPayload(msg SubjectMsg, payload interface{}) error
 						handle(msg, nil, payload)
 					}()
 				}
+
 				return nil
 			}
 		}

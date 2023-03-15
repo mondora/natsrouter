@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	notAvailable = "N/A"
+)
+
 type Msg struct {
 	msg interface{}
 	sub string
@@ -42,6 +46,7 @@ func catchPanic(testFunc func()) (recv interface{}) {
 	}()
 
 	testFunc()
+
 	return
 }
 
@@ -166,13 +171,14 @@ func getRoutingSubscription(subtopic string, star bool) string {
 	if star {
 		return subject + ".>"
 	}
+
 	return subject
 }
 
 func TestRouterMulti2(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	var wg sync.WaitGroup
 	wg.Add(1)
 	router.Handle(getRoutingSubscription(":context", true), 1, func(msg SubjectMsg, ps Params, _ interface{}) {
@@ -199,7 +205,7 @@ func TestRouterMulti2(t *testing.T) {
 func TestRouterMulti2b(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	routingSubs := getRoutingSubscription("*", true)
 	assert.Equal(t, "ROUTING.v2.*.>", routingSubs)
 	var wg sync.WaitGroup
@@ -226,7 +232,7 @@ func TestRouterMulti2b(t *testing.T) {
 func TestRouterMulti22(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	var wg sync.WaitGroup
 	wg.Add(1)
 	router.Handle("AAA.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
@@ -262,7 +268,7 @@ func TestRouterMulti22(t *testing.T) {
 func TestRouterMulti3(t *testing.T) {
 	router := New()
 	routed := false
-	result := "N/A"
+	result := notAvailable
 	var wg sync.WaitGroup
 	wg.Add(1)
 	router.Handle("AAA.>", 1, func(msg SubjectMsg, ps Params, _ interface{}) {
