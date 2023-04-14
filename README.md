@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/mondora/natsrouter/v2"
-	"github.com/nats-io/nats.go"
 )
 
 type Config struct {
@@ -30,8 +29,17 @@ type Config struct {
 	// ...
 }
 
+// NatsMsgFake simil to nats.Msg
+type NatsMsgFake struct {
+	Data    []byte
+	Subject string
+	Sub     *struct {
+		Subject string
+	}
+}
+
 type SubMsg struct {
-	msg *nats.Msg
+	msg *NatsMsgFake
 	sub string
 }
 
@@ -43,7 +51,7 @@ func (sm *SubMsg) GetSubject() string {
 	return sm.sub
 }
 
-func NewSubjectMsg(natsMsg *nats.Msg) natsrouter.SubjectMsg {
+func NewSubjectMsg(natsMsg *NatsMsgFake /*nats.Msg*/) natsrouter.SubjectMsg {
 	subMsg := &SubMsg{
 		msg: natsMsg,
 		sub: natsMsg.Subject,
@@ -54,10 +62,10 @@ func NewSubjectMsg(natsMsg *nats.Msg) natsrouter.SubjectMsg {
 
 type Pipeline struct {
 	cfg *Config
-	msg *nats.Msg
+	msg *NatsMsgFake
 }
 
-func NewListenerPipeline(cfg *Config, msg *nats.Msg) *Pipeline {
+func NewListenerPipeline(cfg *Config, msg *NatsMsgFake) *Pipeline {
 	return &Pipeline{
 		cfg: cfg,
 		msg: msg,
@@ -98,7 +106,7 @@ func (cfg *Config) SubscribeListener() {
 	// ...
 }
 
-func (cfg *Config) listenerHandler(msg *nats.Msg) {
+func (cfg *Config) listenerHandler(msg *NatsMsgFake) {
 	message := NewListenerPipeline(cfg, msg)
 	// manages incoming NATS message, scanning binary tree for all defined rank
 	subMsg := NewSubjectMsg(msg)
@@ -115,7 +123,7 @@ func main() {
 	}
 	cfg.SubscribeListener()
 	// inject msg (simulate NATS incoming message)
-	cfg.listenerHandler(&nats.Msg{
+	cfg.listenerHandler(&NatsMsgFake{
 		Subject: "input.TEST.v1.msg.test_action",
 		Data:    []byte("TEST DATA"),
 	})

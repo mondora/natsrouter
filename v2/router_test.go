@@ -6,13 +6,21 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
 	notAvailable = "N/A"
 )
+
+// NatsMsgFake simil to nats.Msg
+type NatsMsgFake struct {
+	Data    []byte
+	Subject string
+	Sub     *struct {
+		Subject string
+	}
+}
 
 type Msg struct {
 	msg interface{}
@@ -28,7 +36,7 @@ func (m *Msg) GetSubject() string {
 }
 
 func NewMessage(subject string) SubjectMsg {
-	natsMsg := &nats.Msg{
+	natsMsg := &NatsMsgFake{
 		Subject: subject,
 	}
 	var msg SubjectMsg
