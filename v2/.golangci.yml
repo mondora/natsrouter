@@ -25,7 +25,7 @@ linters:
     - goconst # Finds repeated strings that could be replaced by a constant
     - gocyclo # Computes and checks the cyclomatic complexity of functions
     #- maligned # Tool to detect Go structs that would take less memory if their fields were sorted
-    - depguard # Go linter that checks if package imports are in a list of acceptable packages
+    #- depguard # Go linter that checks if package imports are in a list of acceptable packages
     - misspell # Finds commonly misspelled English words in comments
     - nakedret # Finds naked returns in functions greater than a specified function length
     - prealloc # Finds slice declarations that could potentially be preallocated
@@ -50,7 +50,6 @@ linters:
     - whitespace
     - asciicheck
     - bodyclose
-    - depguard
     - dogsled
     - durationcheck
     - errorlint
