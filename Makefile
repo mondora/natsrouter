@@ -13,3 +13,6 @@ tidy:
 test:
 	go test -race -covermode=atomic $(shell go list ./... | grep -v /vendor/)
 	go test -bench=. $(shell go list ./... | grep -v /vendor/)
+
+vuln:
+	govulncheck -show verbose ./...

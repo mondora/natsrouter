@@ -63,8 +63,8 @@ linters:
 
 linters-settings:
   govet:
-    check-shadowing: true
-    #enable:
+    enable:
+      - shadow
       #- fieldalignment
     enable-all: false
   cyclop:
